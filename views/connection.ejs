@@ -72,20 +72,31 @@
 
           <!-- Upload Session Instructions -->
           <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-3">📦 How to Setup Session</h3>
-            <ol class="list-decimal list-inside space-y-2 text-sm text-blue-800 dark:text-blue-400">
-              <li><strong>On your local computer:</strong> Run <code class="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">npm run setup-session</code></li>
-              <li>A browser window will open automatically</li>
-              <li>Login to HeyGen using your Google account</li>
-              <li>After login, the script will save session and create <code class="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">heygen-session.zip</code></li>
-              <li>Upload that ZIP file below</li>
-            </ol>
-            <p class="text-xs text-blue-700 dark:text-blue-500 mt-3">💡 Session typically lasts 2-4 weeks. You'll only need to update when it expires.</p>
+            <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-3">🌐 Easy Setup - Login in Browser</h3>
+            <p class="text-sm text-blue-800 dark:text-blue-400 mb-4">
+              Click the button below to open a browser window where you can login to HeyGen directly!
+            </p>
+            <button @click="openBrowserViewer" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center space-x-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+              <span>Open Browser & Login to HeyGen</span>
+            </button>
+            <p class="text-xs text-blue-700 dark:text-blue-500 mt-3">
+              💡 After logging in, click "Save Session" to complete setup. Session lasts 2-4 weeks!
+            </p>
           </div>
 
-          <!-- Upload Form -->
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Upload Session File</h3>
+          <div class="my-6 flex items-center">
+            <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+            <span class="px-4 text-sm text-gray-500 dark:text-gray-400">OR</span>
+            <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+          </div>
+
+          <!-- Upload Session (Alternative) -->
+          <div class="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">📦 Alternative: Upload Session ZIP</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              If you prefer, run <code class="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">npm run export-session</code> on your local machine and upload the ZIP file.
+            </p>
             
             <form @submit.prevent="uploadSession" class="space-y-4">
               <div>
@@ -155,6 +166,40 @@ function connection() {
         this.hasSession = data.has_session;
       } catch (error) {
         console.error('Failed to check session:', error);
+      }
+    },
+
+    async openBrowserViewer() {
+      try {
+        this.statusMessage = 'Opening browser...';
+        this.statusType = 'success';
+
+        const res = await fetch('/admin/browser/start', {
+          method: 'POST'
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          // Open browser viewer in new window
+          const width = 1320;
+          const height = 900;
+          const left = (screen.width - width) / 2;
+          const top = (screen.height - height) / 2;
+
+          window.open(
+            data.viewerUrl,
+            'HeyGen Login',
+            `width=${width},height=${height},left=${left},top=${top}`
+          );
+
+          this.showStatus('Browser opened! Login and click "Save Session" when done.', 'success');
+        } else {
+          this.showStatus('Failed to open browser', 'error');
+        }
+      } catch (error) {
+        console.error('Failed to open browser:', error);
+        this.showStatus('Failed to open browser', 'error');
       }
     },
     

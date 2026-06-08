@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser Viewer - HeyGen Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; overflow: hidden; background: #1a1a1a; }
+    #browserCanvas { 
+      display: block; 
+      max-width: 100%; 
+      max-height: 100vh;
+      margin: 0 auto;
+      background: #000;
+      cursor: crosshair;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex flex-col h-screen">
+    <!-- Toolbar -->
+    <div class="bg-gray-900 text-white p-4 flex justify-between items-center">
+      <div class="flex items-center space-x-4">
+        <h1 class="text-xl font-bold">🌐 HeyGen Login</h1>
+        <span class="text-sm text-gray-400">Login with your Google account</span>
+      </div>
+      <div class="flex space-x-3">
+        <button onclick="saveSession()" class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+          💾 Save Session
+        </button>
+        <button onclick="closeViewer()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+
+    <!-- Browser Canvas -->
+    <div class="flex-1 flex items-center justify-center bg-gray-800">
+      <canvas id="browserCanvas" width="1280" height="720"></canvas>
+    </div>
+
+    <!-- Status -->
+    <div id="status" class="bg-gray-900 text-white p-2 text-center text-sm">
+      Connecting to browser...
+    </div>
+  </div>
+
+  <script>
+    const sessionId = '<%= sessionId %>';
+    const canvas = document.getElementById('browserCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusDiv = document.getElementById('status');
+    
+    let ws = null;
+    let isConnected = false;
+
+    function connect() {
+      ws = new WebSocket(`ws://${window.location.host}/browser-ws?session=${sessionId}`);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        isConnected = true;
+        statusDiv.textContent = '✅ Connected - Login to HeyGen with Google';
+        statusDiv.className = 'bg-green-900 text-white p-2 text-center text-sm';
+      };
+
+      ws.onmessage = (event) => {
+        // Receive screenshot from server
+        const blob = new Blob([event.data], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+        };
+        img.src = url;
+      };
+
+      ws.onerror = () => {
+        statusDiv.textContent = '❌ Connection error';
+        statusDiv.className = 'bg-red-900 text-white p-2 text-center text-sm';
+      };
+
+      ws.onclose = () => {
+        isConnected = false;
+        statusDiv.textContent = '🔌 Disconnected';
+        statusDiv.className = 'bg-gray-900 text-white p-2 text-center text-sm';
+      };
+    }
+
+    // Mouse events
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isConnected) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (1280 / rect.width);
+      const y = (e.clientY - rect.top) * (720 / rect.height);
+      sendEvent({ type: 'mousemove', x, y });
+    });
+
+    canvas.addEventListener('click', (e) => {
+      if (!isConnected) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (1280 / rect.width);
+      const y = (e.clientY - rect.top) * (720 / rect.height);
+      sendEvent({ type: 'click', x, y });
+    });
+
+    // Keyboard events
+    document.addEventListener('keydown', (e) => {
+      if (!isConnected) return;
+      e.preventDefault();
+      sendEvent({ type: 'keydown', key: e.key });
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (!isConnected) return;
+      e.preventDefault();
+      sendEvent({ type: 'keyup', key: e.key });
+    });
+
+    function sendEvent(event) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(event));
+      }
+    }
+
+    async function saveSession() {
+      statusDiv.textContent = '💾 Saving session...';
+      statusDiv.className = 'bg-blue-900 text-white p-2 text-center text-sm';
+      
+      try {
+        const res = await fetch(`/admin/browser/${sessionId}/save`, {
+          method: 'POST'
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          statusDiv.textContent = '✅ Session saved! You can close this window.';
+          statusDiv.className = 'bg-green-900 text-white p-2 text-center text-sm';
+          setTimeout(() => window.close(), 2000);
+        } else {
+          statusDiv.textContent = '❌ Failed to save session';
+          statusDiv.className = 'bg-red-900 text-white p-2 text-center text-sm';
+        }
+      } catch (error) {
+        statusDiv.textContent = '❌ Error: ' + error.message;
+        statusDiv.className = 'bg-red-900 text-white p-2 text-center text-sm';
+      }
+    }
+
+    async function closeViewer() {
+      await fetch(`/admin/browser/${sessionId}/close`, { method: 'POST' });
+      window.close();
+    }
+
+    // Start connection
+    connect();
+  </script>
+</body>
+</html>

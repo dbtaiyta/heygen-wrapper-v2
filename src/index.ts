@@ -11,6 +11,7 @@ import apiRouter from './routes/api.js';
 import adminRouter from './routes/admin/index.js';
 import { createGenerateWorker } from './workers/generate-worker.js';
 import browserManager from './services/browser-manager.js';
+import browserViewer from './services/browser-viewer.js';
 
 // Load env vars
 dotenv.config();
@@ -63,10 +64,14 @@ async function bootstrap() {
     await browserManager.initialize();
     logger.info('Browser manager initialized');
 
+    // Initialize browser viewer
+    await browserViewer.initialize();
+    logger.info('Browser viewer initialized');
+
     // Create worker
     const worker = createGenerateWorker();
-    logger.info('Worker created', { 
-      concurrency: process.env.MAX_CONCURRENT_JOBS || 1 
+    logger.info('Worker created', {
+      concurrency: process.env.MAX_CONCURRENT_JOBS || 1
     });
 
     // Start server
@@ -80,6 +85,7 @@ async function bootstrap() {
       logger.info('SIGTERM received, shutting down gracefully...');
       await worker.close();
       await browserManager.close();
+      await browserViewer.cleanup();
       process.exit(0);
     });
 
