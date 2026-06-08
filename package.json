@@ -8,7 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "setup-session": "tsx src/scripts/setup-session.ts"
+    "setup-session": "tsx src/scripts/setup-session.ts",
+    "export-session": "tsx src/scripts/export-brave-session.ts"
   },
   "keywords": [
     "heygen",
