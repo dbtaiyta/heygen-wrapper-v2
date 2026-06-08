@@ -16,8 +16,8 @@ router.get('/', (req: Request, res: Response) => {
 // Get all API keys (masked)
 router.get('/data', async (req: Request, res: Response) => {
   try {
-    const data = await db.read();
-    const keys = (data.apiKeys || []).map((k: any) => ({
+    await db.read();
+    const keys = (db.data?.apiKeys || []).map((k: any) => ({
       id: k.id,
       name: k.name,
       masked_key: k.key.substring(0, 8) + '...' + k.key.substring(k.key.length - 4),
@@ -42,10 +42,11 @@ router.post('/', async (req: Request, res: Response) => {
     const key = 'hgw_' + randomBytes(32).toString('hex');
     const hashedKey = await bcrypt.hash(key, 10);
 
-    const data = await db.read();
-    if (!data.apiKeys) data.apiKeys = [];
-    
-    data.apiKeys.push({
+    await db.read();
+    if (!db.data) db.data = { jobs: [], api_keys: [], settings: {} };
+    if (!db.data.apiKeys) db.data.apiKeys = [];
+
+    db.data.apiKeys.push({
       id: randomBytes(8).toString('hex'),
       name,
       key: hashedKey,
@@ -65,9 +66,11 @@ router.post('/', async (req: Request, res: Response) => {
 // Delete API key
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const data = await db.read();
-    data.apiKeys = (data.apiKeys || []).filter((k: any) => k.id !== req.params.id);
-    await db.write();
+    await db.read();
+    if (db.data?.apiKeys) {
+      db.data.apiKeys = db.data.apiKeys.filter((k: any) => k.id !== req.params.id);
+      await db.write();
+    }
     res.json({ message: 'Key deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete key' });

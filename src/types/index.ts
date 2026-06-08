@@ -64,5 +64,7 @@ export interface GenerateRequest {
 export interface Database {
   jobs: Job[];
   api_keys: ApiKey[];
+  apiKeys?: any[];
+  proxyConfig?: any;
   settings: Record<string, string>;
 }

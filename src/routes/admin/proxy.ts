@@ -12,8 +12,8 @@ router.get('/', (req: Request, res: Response) => {
 
 router.get('/data', async (req: Request, res: Response) => {
   try {
-    const data = await db.read();
-    res.json({ config: data.proxyConfig || { type: 'none' } });
+    await db.read();
+    res.json({ config: db.data?.proxyConfig || { type: 'none' } });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load config' });
   }
@@ -21,8 +21,9 @@ router.get('/data', async (req: Request, res: Response) => {
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const data = await db.read();
-    data.proxyConfig = req.body;
+    await db.read();
+    if (!db.data) db.data = { jobs: [], api_keys: [], settings: {} };
+    db.data.proxyConfig = req.body;
     await db.write();
     res.json({ success: true });
   } catch (error) {
