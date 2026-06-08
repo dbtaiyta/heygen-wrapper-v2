@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+
+# Data
+data/
+videos/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temp
+tmp/
+temp/
