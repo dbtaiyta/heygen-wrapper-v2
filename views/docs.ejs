@@ -1,0 +1,141 @@
+<div class="mb-6">
+  <h1 class="text-3xl font-bold text-gray-900 dark:text-white">API Documentation</h1>
+  <p class="text-gray-500 dark:text-gray-400 mt-1">Complete reference for HeyGen Wrapper API</p>
+</div>
+
+<div class="space-y-6">
+  <!-- Authentication -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Authentication</h2>
+    <p class="text-gray-700 dark:text-gray-300 mb-3">All API requests require an API key in the Authorization header:</p>
+    <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">curl https://heygen-v2.dbtaiyta.cfd/api/generate \
+  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Generate API keys in the <a href="/api-keys" class="text-blue-600 hover:underline">API Keys</a> section.</p>
+  </div>
+
+  <!-- Generate Video -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Generate Video</h2>
+      <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 rounded-full text-sm font-mono">POST /api/generate</span>
+    </div>
+    <p class="text-gray-700 dark:text-gray-300 mb-4">Generate a video with HeyGen avatar and audio.</p>
+    
+    <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Parameters (multipart/form-data)</h3>
+    <div class="overflow-x-auto mb-4">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-4 py-2 text-left">Field</th>
+            <th class="px-4 py-2 text-left">Type</th>
+            <th class="px-4 py-2 text-left">Required</th>
+            <th class="px-4 py-2 text-left">Description</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <tr>
+            <td class="px-4 py-2 font-mono text-blue-600">audio</td>
+            <td class="px-4 py-2">file</td>
+            <td class="px-4 py-2 text-green-600">Yes</td>
+            <td class="px-4 py-2">Audio file (MP3, WAV)</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono text-blue-600">avatar_name</td>
+            <td class="px-4 py-2">string</td>
+            <td class="px-4 py-2 text-green-600">Yes</td>
+            <td class="px-4 py-2">Avatar name from HeyGen</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono text-blue-600">avatar_index</td>
+            <td class="px-4 py-2">number</td>
+            <td class="px-4 py-2 text-gray-500">No</td>
+            <td class="px-4 py-2">Avatar variant (default: 0)</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono text-blue-600">title</td>
+            <td class="px-4 py-2">string</td>
+            <td class="px-4 py-2 text-gray-500">No</td>
+            <td class="px-4 py-2">Video title</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono text-blue-600">orientation</td>
+            <td class="px-4 py-2">string</td>
+            <td class="px-4 py-2 text-gray-500">No</td>
+            <td class="px-4 py-2">landscape | portrait</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Example Request</h3>
+    <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm mb-4">curl -X POST https://heygen-v2.dbtaiyta.cfd/api/generate \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "audio=@speech.mp3" \
+  -F "avatar_name=John" \
+  -F "title=My Video"</pre>
+
+    <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Response</h3>
+    <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">{
+  "job_id": "abc-123-def",
+  "status": "queued",
+  "message": "Video generation queued"
+}</pre>
+  </div>
+
+  <!-- Get Job Status -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Get Job Status</h2>
+      <span class="px-3 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 rounded-full text-sm font-mono">GET /api/jobs/:job_id</span>
+    </div>
+    
+    <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Example Request</h3>
+    <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm mb-4">curl https://heygen-v2.dbtaiyta.cfd/api/jobs/abc-123-def \
+  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+
+    <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Response</h3>
+    <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">{
+  "job_id": "abc-123-def",
+  "status": "completed",
+  "progress": 100,
+  "video_url": "/api/downloads/abc-123-def.mp4",
+  "created_at": "2026-06-08T10:30:00Z",
+  "completed_at": "2026-06-08T10:35:00Z"
+}</pre>
+  </div>
+
+  <!-- List Jobs -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">List Jobs</h2>
+      <span class="px-3 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 rounded-full text-sm font-mono">GET /api/jobs</span>
+    </div>
+    
+    <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">curl https://heygen-v2.dbtaiyta.cfd/api/jobs \
+  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+  </div>
+
+  <!-- Download Video -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Download Video</h2>
+      <span class="px-3 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 rounded-full text-sm font-mono">GET /api/downloads/:filename</span>
+    </div>
+    <p class="text-gray-700 dark:text-gray-300 mb-4">Download the generated video file. Get the filename from the job status response.</p>
+    <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">curl https://heygen-v2.dbtaiyta.cfd/api/downloads/abc-123-def.mp4 \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -o video.mp4</pre>
+  </div>
+
+  <!-- Status Codes -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Status Codes</h2>
+    <div class="space-y-2 text-sm">
+      <div class="flex"><span class="font-mono text-green-600 w-16">200</span><span class="text-gray-700 dark:text-gray-300">Success</span></div>
+      <div class="flex"><span class="font-mono text-yellow-600 w-16">400</span><span class="text-gray-700 dark:text-gray-300">Bad Request - Invalid parameters</span></div>
+      <div class="flex"><span class="font-mono text-red-600 w-16">401</span><span class="text-gray-700 dark:text-gray-300">Unauthorized - Invalid API key</span></div>
+      <div class="flex"><span class="font-mono text-red-600 w-16">404</span><span class="text-gray-700 dark:text-gray-300">Not Found - Job or file doesn't exist</span></div>
+      <div class="flex"><span class="font-mono text-red-600 w-16">500</span><span class="text-gray-700 dark:text-gray-300">Internal Server Error</span></div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,168 @@
+<div x-data="connection()" x-init="init()">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">HeyGen Connection</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Connect your HeyGen account via Google OAuth</p>
+  </div>
+
+  <!-- Session Status Card -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Session Status</h2>
+      <span class="px-3 py-1 text-sm font-semibold rounded-full" 
+            :class="hasSession ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'"
+            x-text="hasSession ? 'Connected' : 'Disconnected'"></span>
+    </div>
+    
+    <template x-if="hasSession">
+      <div class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+        <p>✓ Browser session is active</p>
+        <p>✓ Ready to generate videos</p>
+      </div>
+    </template>
+    
+    <template x-if="!hasSession">
+      <div class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+        <p>✗ No active session</p>
+        <p>✗ You need to login to HeyGen first</p>
+      </div>
+    </template>
+  </div>
+
+  <!-- Connection Instructions -->
+  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
+    <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-3">How to Connect</h3>
+    <ol class="list-decimal list-inside space-y-2 text-sm text-blue-800 dark:text-blue-400">
+      <li>Click "Connect HeyGen Account" button below</li>
+      <li>A browser window will open automatically</li>
+      <li>Login to HeyGen using your Google account</li>
+      <li>Once logged in, click "Save Session" button</li>
+      <li>You can then close the browser window</li>
+    </ol>
+  </div>
+
+  <!-- Connection Actions -->
+  <div class="space-y-4">
+    <button @click="startConnection" :disabled="connecting" class="w-full md:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+      <template x-if="!connecting">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+          Connect HeyGen Account
+        </div>
+      </template>
+      <template x-if="connecting">
+        <div class="flex items-center">
+          <svg class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          Opening browser...
+        </div>
+      </template>
+    </button>
+
+    <template x-if="browserOpened">
+      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+        <p class="text-sm text-yellow-800 dark:text-yellow-400 mb-3">Browser window opened. Login to HeyGen and click the button below when done.</p>
+        <button @click="saveSession" :disabled="saving" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+          <template x-if="!saving">Save Session</template>
+          <template x-if="saving">Saving...</template>
+        </button>
+      </div>
+    </template>
+
+    <template x-if="hasSession">
+      <button @click="clearSession" class="px-6 py-2 border border-red-600 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+        Clear Session
+      </button>
+    </template>
+  </div>
+
+  <!-- Status Messages -->
+  <div x-show="statusMessage" class="mt-6 p-4 rounded-lg" :class="statusType === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400'">
+    <p class="text-sm" x-text="statusMessage"></p>
+  </div>
+</div>
+
+<script>
+function connection() {
+  return {
+    hasSession: false,
+    connecting: false,
+    browserOpened: false,
+    saving: false,
+    statusMessage: '',
+    statusType: 'success',
+    
+    init() {
+      this.checkSession();
+    },
+    
+    async checkSession() {
+      try {
+        const res = await fetch('/api/session/status');
+        const data = await res.json();
+        this.hasSession = data.has_session;
+      } catch (error) {
+        console.error('Failed to check session:', error);
+      }
+    },
+    
+    async startConnection() {
+      this.connecting = true;
+      this.statusMessage = '';
+      try {
+        const res = await fetch('/admin/session/start', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          this.browserOpened = true;
+          this.showStatus('Browser opened. Please login to HeyGen.', 'success');
+        } else {
+          this.showStatus(data.error || 'Failed to start session', 'error');
+        }
+      } catch (error) {
+        console.error('Failed to start connection:', error);
+        this.showStatus('Failed to start browser session', 'error');
+      } finally {
+        this.connecting = false;
+      }
+    },
+    
+    async saveSession() {
+      this.saving = true;
+      this.statusMessage = '';
+      try {
+        const res = await fetch('/admin/session/save', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          this.hasSession = true;
+          this.browserOpened = false;
+          this.showStatus('Session saved successfully! You can now generate videos.', 'success');
+        } else {
+          this.showStatus(data.error || 'Failed to save session', 'error');
+        }
+      } catch (error) {
+        console.error('Failed to save session:', error);
+        this.showStatus('Failed to save session', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+    
+    async clearSession() {
+      if (!confirm('Are you sure you want to clear the session? You will need to login again.')) return;
+      try {
+        const res = await fetch('/admin/session/clear', { method: 'POST' });
+        if (res.ok) {
+          this.hasSession = false;
+          this.showStatus('Session cleared', 'success');
+        }
+      } catch (error) {
+        console.error('Failed to clear session:', error);
+      }
+    },
+    
+    showStatus(message, type) {
+      this.statusMessage = message;
+      this.statusType = type;
+      setTimeout(() => this.statusMessage = '', 5000);
+    }
+  }
+}
+</script>

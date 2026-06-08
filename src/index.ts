@@ -3,66 +3,40 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import logger from './utils/logger.js';
 import { initDatabase } from './utils/db.js';
 import apiRouter from './routes/api.js';
+import adminRouter from './routes/admin/index.js';
 import { createGenerateWorker } from './workers/generate-worker.js';
 import browserManager from './services/browser-manager.js';
 
 // Load env vars
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// View engine setup
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '../views'));
+
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // Allow inline scripts for Alpine.js
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api', apiRouter);
-
-// Simple admin page
-app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>HeyGen Wrapper v2</title>
-      <style>
-        body { font-family: system-ui; max-width: 800px; margin: 50px auto; padding: 20px; }
-        h1 { color: #333; }
-        .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
-        .ok { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
-      </style>
-    </head>
-    <body>
-      <h1>HeyGen Wrapper v2</h1>
-      <p>API is running. Check <a href="/api/health">/api/health</a> for status.</p>
-      <h2>Quick Links</h2>
-      <ul>
-        <li><a href="/api/health">Health Check</a></li>
-        <li><a href="/api/session/status">Session Status</a></li>
-        <li><a href="/api/jobs">Job History</a></li>
-      </ul>
-      <h2>API Endpoints</h2>
-      <pre>
-POST /api/generate          - Generate video (multipart: audio, avatar_name, ...)
-GET  /api/jobs/:job_id      - Get job status
-GET  /api/jobs              - List jobs
-GET  /api/downloads/:file   - Download video
-GET  /api/health            - Health check
-GET  /api/session/status    - Session status
-      </pre>
-    </body>
-    </html>
-  `);
-});
+app.use('/', adminRouter);
 
 async function bootstrap() {
   try {

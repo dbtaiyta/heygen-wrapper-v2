@@ -1,0 +1,140 @@
+<div x-data="apiKeys()" x-init="init()">
+  <div class="mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">API Keys</h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1">Manage API keys for n8n and other integrations</p>
+    </div>
+    <button @click="showCreateModal = true" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+      Generate New Key
+    </button>
+  </div>
+
+  <!-- API Keys Table -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">API Key</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Last Used</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <template x-for="key in keys" :key="key.id">
+            <tr>
+              <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white" x-text="key.name"></td>
+              <td class="px-6 py-4 text-sm font-mono text-gray-700 dark:text-gray-300">
+                <div class="flex items-center">
+                  <span x-text="key.masked_key"></span>
+                  <button @click="copyKey(key.key)" class="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                  </button>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300" x-text="new Date(key.created_at).toLocaleDateString()"></td>
+              <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300" x-text="key.last_used ? new Date(key.last_used).toLocaleDateString() : 'Never'"></td>
+              <td class="px-6 py-4 text-sm">
+                <button @click="deleteKey(key.id)" class="text-red-600 hover:text-red-800 dark:text-red-400">Delete</button>
+              </td>
+            </tr>
+          </template>
+          <template x-if="keys.length === 0">
+            <tr>
+              <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No API keys yet. Generate one to get started.</td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Key Modal -->
+  <div x-show="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCreateModal = false">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Generate New API Key</h3>
+      <form @submit.prevent="createKey">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Name</label>
+          <input x-model="newKeyName" type="text" placeholder="e.g., n8n Production" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required>
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button type="button" @click="showCreateModal = false" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Generate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div x-show="newKeyCreated" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="newKeyCreated = null">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+      <h3 class="text-lg font-semibold text-green-600 dark:text-green-400 mb-4">✓ API Key Generated</h3>
+      <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">Copy this key now. You won't be able to see it again!</p>
+      <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg font-mono text-sm break-all mb-4" x-text="newKeyCreated"></div>
+      <button @click="copyKey(newKeyCreated); newKeyCreated = null" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Copy & Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function apiKeys() {
+  return {
+    keys: [],
+    showCreateModal: false,
+    newKeyName: '',
+    newKeyCreated: null,
+    
+    init() {
+      this.fetchKeys();
+    },
+    
+    async fetchKeys() {
+      try {
+        const res = await fetch('/admin/api-keys/data');
+        const data = await res.json();
+        this.keys = data.keys || [];
+      } catch (error) {
+        console.error('Failed to fetch keys:', error);
+      }
+    },
+    
+    async createKey() {
+      try {
+        const res = await fetch('/admin/api-keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: this.newKeyName })
+        });
+        const data = await res.json();
+        this.newKeyCreated = data.key;
+        this.newKeyName = '';
+        this.showCreateModal = false;
+        this.fetchKeys();
+      } catch (error) {
+        console.error('Failed to create key:', error);
+        alert('Failed to create API key');
+      }
+    },
+    
+    async deleteKey(id) {
+      if (!confirm('Are you sure you want to delete this API key?')) return;
+      try {
+        await fetch(`/admin/api-keys/${id}`, { method: 'DELETE' });
+        this.fetchKeys();
+      } catch (error) {
+        console.error('Failed to delete key:', error);
+        alert('Failed to delete API key');
+      }
+    },
+    
+    copyKey(key) {
+      navigator.clipboard.writeText(key);
+      alert('API key copied to clipboard!');
+    }
+  }
+}
+</script>
