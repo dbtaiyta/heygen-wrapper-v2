@@ -4,7 +4,7 @@ services:
   heygen-wrapper:
     build: .
     ports:
-      - "8077:3000"
+      - "8370:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
