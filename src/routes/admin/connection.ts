@@ -3,12 +3,9 @@ import multer from 'multer';
 import browserManager from '../../services/browser-manager.js';
 import { chromium } from 'playwright';
 import logger from '../../utils/logger.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import AdmZip from 'adm-zip';
 import fs from 'fs/promises';
 import path from 'path';
-
-const execAsync = promisify(exec);
 const router = Router();
 
 // Setup multer for ZIP file uploads
@@ -150,14 +147,28 @@ router.post('/upload', upload.single('session'), async (req: Request, res: Respo
 
     logger.info('Processing uploaded session ZIP', { zipPath, profileDir });
 
-    // Create temp extraction directory
-    const tempDir = `${profileDir}_temp_${Date.now()}`;
-    await fs.mkdir(tempDir, { recursive: true });
-
     try {
-      // Extract ZIP file
-      await execAsync(`unzip -o "${zipPath}" -d "${tempDir}"`);
+      // Extract ZIP file using adm-zip
+      const zip = new AdmZip(zipPath);
+      const tempDir = `${profileDir}_temp_${Date.now()}`;
+
+      logger.info('Extracting ZIP file', { tempDir });
+      zip.extractAllTo(tempDir, true);
       logger.info('ZIP extracted successfully');
+
+      // Find the actual profile directory inside extracted content
+      const entries = await fs.readdir(tempDir);
+      let extractedProfilePath = tempDir;
+
+      // If there's a single directory inside, use that
+      if (entries.length === 1) {
+        const firstEntry = entries[0];
+        const firstEntryPath = path.join(tempDir, firstEntry);
+        const stat = await fs.stat(firstEntryPath);
+        if (stat.isDirectory()) {
+          extractedProfilePath = firstEntryPath;
+        }
+      }
 
       // Backup old profile if exists
       try {
@@ -169,10 +180,17 @@ router.post('/upload', upload.single('session'), async (req: Request, res: Respo
       }
 
       // Move extracted content to profile directory
-      await fs.rename(tempDir, profileDir);
+      await fs.rename(extractedProfilePath, profileDir);
       logger.info('New session installed');
 
-      // Clean up
+      // Clean up temp directory if different from extracted profile
+      if (extractedProfilePath !== tempDir) {
+        try {
+          await fs.rm(tempDir, { recursive: true, force: true });
+        } catch (e) {}
+      }
+
+      // Clean up uploaded ZIP
       await fs.unlink(zipPath);
 
       // Reinitialize browser with new session
@@ -188,10 +206,7 @@ router.post('/upload', upload.single('session'), async (req: Request, res: Respo
         sessionValid: isValid
       });
     } catch (error) {
-      // Clean up temp directory on error
-      try {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      } catch (e) {}
+      logger.error('Error during extraction', { error });
       throw error;
     }
   } catch (error) {
@@ -217,8 +232,10 @@ router.get('/download', async (req: Request, res: Response) => {
     const profileDir = process.env.CHROME_PROFILE_DIR || './data/chrome-profile';
     const zipPath = `/tmp/heygen-session-${Date.now()}.zip`;
 
-    // Create ZIP of profile directory
-    await execAsync(`cd "${path.dirname(profileDir)}" && zip -r "${zipPath}" "${path.basename(profileDir)}"`);
+    // Create ZIP using adm-zip
+    const zip = new AdmZip();
+    zip.addLocalFolder(profileDir);
+    zip.writeZip(zipPath);
 
     res.download(zipPath, 'heygen-session.zip', async (err) => {
       // Clean up temp file after download
